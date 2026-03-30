@@ -7,7 +7,3 @@ xgboost
 scikit-learn
 pydantic
 python-multipart
-streamlit==1.35.0
-requests==2.31.0
-plotly==5.22.0
-altair==4.2.2
