@@ -1,0 +1,256 @@
+# FASTAPI BEGINNER GUIDE — Traffic Stress Project
+# Read this alongside main.py
+
+# ============================================================
+# CONCEPT 1: WHAT IS AN API?
+# ============================================================
+# API = Application Programming Interface
+# Think of it like a WAITER in a restaurant:
+#
+#   YOU (client)  →  asks waiter for food  →  KITCHEN (server)
+#   YOU (client)  ←  waiter brings food    ←  KITCHEN (server)
+#
+# In your project:
+#   Dashboard (client) → sends traffic data → FastAPI (server)
+#   Dashboard (client) ← gets stress level  ← FastAPI (server)
+
+
+# ============================================================
+# CONCEPT 2: HTTP METHODS
+# ============================================================
+# Every API request has a METHOD that describes WHAT you're doing:
+#
+#   GET    → Fetch/Read data      (like: show me all zones)
+#   POST   → Send/Create data     (like: predict stress for THIS data)
+#   PUT    → Update existing data
+#   DELETE → Delete data
+#
+# In your project:
+#   GET  /zones       → get all zone statuses
+#   POST /predict     → send traffic data, get prediction back
+
+
+# ============================================================
+# CONCEPT 3: ENDPOINTS
+# ============================================================
+# An endpoint = a URL that does something specific
+#
+#   http://localhost:8000/          → welcome message
+#   http://localhost:8000/health    → is the API alive?
+#   http://localhost:8000/predict   → predict stress
+#   http://localhost:8000/zones     → get all zones
+#   http://localhost:8000/zones/Z1  → get zone Z1 specifically
+#
+# Each endpoint is ONE Python function in main.py
+# The decorator above it (@app.get or @app.post) connects
+# the URL to the function.
+
+
+# ============================================================
+# CONCEPT 4: DECORATORS (@app.get, @app.post)
+# ============================================================
+# A decorator = something that WRAPS your function with extra behavior
+#
+# Example from main.py:
+#
+#   @app.get("/health")       ← decorator: "this function handles GET /health"
+#   def health_check():       ← your normal Python function
+#       return {"status": "ok"}
+#
+# FastAPI reads the decorator and automatically:
+# - Listens for requests to that URL
+# - Calls your function when a request arrives
+# - Converts your return value to JSON automatically
+
+
+# ============================================================
+# CONCEPT 5: PYDANTIC MODELS (BaseModel)
+# ============================================================
+# Pydantic = data validation library
+# BaseModel = a class that auto-validates data
+#
+# Without Pydantic (dangerous):
+#   Someone could send {"traffic_density": "HELLO"} → your model crashes
+#
+# With Pydantic (safe):
+#   FastAPI checks types BEFORE your function runs
+#   If wrong → automatic error message returned, function never called
+#
+# Example:
+#   class TrafficInput(BaseModel):
+#       traffic_density: float    ← must be a number
+#       weather_condition: str    ← must be a string
+#
+# When someone sends data to /predict, FastAPI:
+#   1. Reads the JSON
+#   2. Checks it matches TrafficInput
+#   3. If valid → calls your function
+#   4. If invalid → returns 422 error automatically
+
+
+# ============================================================
+# CONCEPT 6: PATH PARAMETERS vs QUERY PARAMETERS vs REQUEST BODY
+# ============================================================
+
+# PATH PARAMETER → part of the URL itself
+#   @app.get("/zones/{zone_id}")
+#   def get_zone(zone_id: str):   ← zone_id comes from URL
+#
+#   Request: GET /zones/Z1
+#   zone_id = "Z1"
+
+# QUERY PARAMETER → after ? in the URL
+#   @app.get("/zones")
+#   def get_zones(limit: int = 10):   ← comes from ?limit=5 in URL
+#
+#   Request: GET /zones?limit=5
+#   limit = 5
+
+# REQUEST BODY → data sent inside POST request (not visible in URL)
+#   @app.post("/predict")
+#   def predict(data: TrafficInput):   ← comes from JSON in request body
+#
+#   Request: POST /predict
+#   Body: {"traffic_density": 65, "avg_speed": 25, ...}
+
+
+# ============================================================
+# CONCEPT 7: HTTP STATUS CODES
+# ============================================================
+# Every API response has a status code:
+#
+#   200 → OK (success)
+#   201 → Created (new thing was made)
+#   400 → Bad Request (client sent wrong data)
+#   404 → Not Found (resource doesn't exist)
+#   422 → Unprocessable Entity (validation failed — Pydantic)
+#   500 → Internal Server Error (something crashed on your end)
+#   503 → Service Unavailable (model not loaded)
+#
+# FastAPI handles 200 and 422 automatically.
+# You manually raise others using HTTPException:
+#
+#   raise HTTPException(status_code=404, detail="Zone not found")
+
+
+# ============================================================
+# CONCEPT 8: HOW JSON WORKS
+# ============================================================
+# JSON = JavaScript Object Notation
+# It's just a text format for sending data between systems
+#
+# Python dict:         JSON:
+# {                    {
+#   "name": "Z1",        "name": "Z1",
+#   "stress": 7.2,       "stress": 7.2,
+#   "active": True       "active": true
+# }                    }
+#
+# FastAPI automatically converts Python dicts to JSON.
+# You just return a dict → FastAPI does the rest.
+
+
+# ============================================================
+# CONCEPT 9: HOW TO TEST YOUR API
+# ============================================================
+
+# METHOD 1: Swagger UI (EASIEST — built into FastAPI)
+#   Run: uvicorn main:app --reload
+#   Open: http://localhost:8000/docs
+#   You'll see a beautiful UI where you can test every endpoint
+#   with a form — no code needed.
+
+# METHOD 2: curl (terminal)
+#   GET request:
+#     curl http://localhost:8000/health
+#
+#   POST request:
+#     curl -X POST http://localhost:8000/predict \
+#       -H "Content-Type: application/json" \
+#       -d '{"traffic_density": 65, "signal_wait_time": 45, ...}'
+
+# METHOD 3: Python requests library
+#   import requests
+#
+#   # GET
+#   response = requests.get("http://localhost:8000/zones")
+#   print(response.json())
+#
+#   # POST
+#   data = {
+#       "traffic_density": 65.0,
+#       "signal_wait_time": 45.0,
+#       "avg_speed": 25.0,
+#       "horn_events_per_min": 12.0,
+#       "road_quality_score": 6.5,
+#       "driver_experience_level": "Intermediate",
+#       "weather_condition": "Clear",
+#       "zone_id": "Z1"
+#   }
+#   response = requests.post("http://localhost:8000/predict", json=data)
+#   print(response.json())
+
+# METHOD 4: Thunder Client (VS Code extension — recommended)
+#   Install "Thunder Client" extension in VS Code
+#   GUI interface similar to Postman, right inside your editor
+
+
+# ============================================================
+# CONCEPT 10: PROJECT FOLDER STRUCTURE
+# ============================================================
+#
+#   traffic_project/
+#   ├── main.py                ← your FastAPI app (this file)
+#   ├── models/
+#   │   ├── xgb_model.pkl      ← saved ML model
+#   │   └── feature_columns.pkl
+#   ├── pipeline/
+#   │   ├── ingest.py
+#   │   └── features.py
+#   ├── ml/
+#   │   └── traffic_stress_project.py   ← your training script
+#   ├── outputs/               ← saved plots
+#   └── requirements.txt       ← list of packages
+
+
+# ============================================================
+# REQUIREMENTS.TXT — always include this
+# ============================================================
+# Create a file called requirements.txt with:
+#
+#   fastapi==0.111.0
+#   uvicorn==0.29.0
+#   joblib==1.4.0
+#   pandas==2.2.0
+#   numpy==1.26.0
+#   xgboost==2.0.0
+#   scikit-learn==1.4.0
+#   pydantic==2.7.0
+#
+# Then anyone can install everything with:
+#   pip install -r requirements.txt
+
+
+# ============================================================
+# HOW TO RUN (step by step)
+# ============================================================
+#
+# Step 1: Train your model first
+#   python traffic_stress_project.py
+#   → This saves models/xgb_model.pkl
+#
+# Step 2: Start the API
+#   uvicorn main:app --reload
+#   → --reload means: auto-restart when you edit main.py
+#   → You'll see: "Uvicorn running on http://127.0.0.1:8000"
+#
+# Step 3: Test it
+#   Open browser → http://localhost:8000/docs
+#   Click any endpoint → "Try it out" → Fill form → Execute
+#
+# Step 4: Call from your frontend dashboard later
+#   fetch("http://localhost:8000/predict", {
+#     method: "POST",
+#     headers: {"Content-Type": "application/json"},
+#     body: JSON.stringify(data)
+#   })
