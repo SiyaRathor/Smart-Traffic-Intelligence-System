@@ -7,3 +7,6 @@ xgboost
 scikit-learn
 pydantic
 python-multipart
+streamlit
+plotly
+requests
