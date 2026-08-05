@@ -1,8 +1,8 @@
 # 🚦 Smart City Traffic Stress Intelligence System
 
-A full-stack ML system that predicts urban traffic stress, detects congestion, and intelligently reroutes traffic using machine learning and graph algorithms.
+A full-stack ML system that predicts urban traffic stress, detects congestion and intelligently reroutes traffic using machine learning and graph algorithms.
 
-**Live Demo:** [Streamlit Dashboard](https://YOUR-APP.streamlit.app) | **API Docs:** [FastAPI Swagger](https://YOUR-API.railway.app/docs)
+**Live Demo:** [Streamlit Dashboard](https://siya-smart-traffic-intelligence-system.streamlit.app/) | **API Docs:** [FastAPI Swagger](https://smart-traffic-intelligence-system-api.onrender.com)
 
 ---
 
@@ -63,7 +63,7 @@ Dijkstra Routing     Streamlit Dashboard
 
 ### 1. Clone the repo
 ```bash
-git clone https://github.com/YOURUSERNAME/Smart-Traffic-Intelligence-System.git
+git clone https://github.com/SiyaRathor/Smart-Traffic-Intelligence-System.git
 cd Smart-Traffic-Intelligence-System
 ```
 
@@ -106,7 +106,7 @@ Dashboard runs at `http://localhost:8501`
 
 ### Example Request
 ```bash
-curl -X POST https://YOUR-API.railway.app/predict \
+curl -X POST https://smart-traffic-intelligence-system-api.onrender.com/predict \
   -H "Content-Type: application/json" \
   -d '{
     "traffic_density": 75.0,
