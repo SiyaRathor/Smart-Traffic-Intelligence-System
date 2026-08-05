@@ -1,6 +1,6 @@
 # 🚦 Smart City Traffic Stress Intelligence System
 
-A full-stack ML system that predicts urban traffic stress, detects congestion and intelligently reroutes traffic using machine learning and graph algorithms.
+A full-stack ML system that predicts urban traffic stress, detects congestion, and recommends intelligent traffic rerouting using machine learning and graph algorithms.
 
 **Live Demo:** [Streamlit Dashboard](https://siya-smart-traffic-intelligence-system.streamlit.app/) | **API Docs:** [FastAPI Swagger](https://smart-traffic-intelligence-system-api.onrender.com)
 
@@ -45,7 +45,7 @@ Dijkstra Routing     Streamlit Dashboard
 | Backend API | FastAPI, Uvicorn, Pydantic |
 | Frontend | Streamlit, Plotly |
 | Algorithm | Dijkstra's (heapq) |
-| Deployment | Railway (API) + Streamlit Cloud |
+| Deployment | Render (FastAPI API) + Streamlit Cloud |
 
 ---
 
