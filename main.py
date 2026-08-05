@@ -1,25 +1,12 @@
-# ============================================================
 # FASTAPI BACKEND — TRAFFIC STRESS DETECTION SYSTEM
-# ============================================================
-# HOW TO RUN THIS FILE:
-#   1. Open terminal in this folder
-#   2. pip install fastapi uvicorn joblib pandas numpy xgboost
-#   3. uvicorn main:app --reload
-#   4. Open browser → http://localhost:8000/docs  ← FREE Swagger UI
-# ============================================================
 
-
-# ── IMPORTS ──────────────────────────────────────────────────
-# FastAPI is the framework. Think of it like Django but lighter and faster.
 from fastapi import FastAPI, HTTPException
 
-# Pydantic is for DATA VALIDATION.
-# It checks that the data sent to your API is correct before processing.
-# Example: if someone sends "abc" where a number is expected → automatic error
+
 from pydantic import BaseModel, Field
 
 # Standard libraries
-import joblib          # Load your saved ML model (.pkl file)
+import joblib         
 import numpy as np
 import pandas as pd
 import heapq
@@ -27,9 +14,7 @@ from typing import Optional, List
 import os
 
 
-# ── CREATE THE APP ────────────────────────────────────────────
-# This ONE line creates your entire API application.
-# title, description, version → shown in Swagger UI docs
+
 app = FastAPI(
     title="🚦 Traffic Stress Detection API",
     description="""
@@ -46,16 +31,12 @@ app = FastAPI(
 )
 
 
-# ── LOAD ML MODEL ─────────────────────────────────────────────
-# We load the model ONCE when the server starts.
-# This is important — you never want to reload a model on every request.
-# That would be very slow.
+
 
 MODEL_PATH = "models/xgb_model.pkl"
 FEATURES_PATH = "models/feature_columns.pkl"
 
-# We use a try-except because if the model file doesn't exist,
-# we want a clear error message, not a crash.
+
 try:
     model = joblib.load(MODEL_PATH)
     feature_columns = joblib.load(FEATURES_PATH)
@@ -66,15 +47,7 @@ except FileNotFoundError:
     feature_columns = []
 
 
-# ── PYDANTIC MODELS (Data Validation) ────────────────────────
-# These are like "contracts" for your API.
-# Anyone calling your API MUST send data in this exact format.
-# FastAPI will automatically reject wrong data with a clear error.
 
-# Field() lets you add:
-#   description → shown in Swagger docs
-#   ge (greater than or equal), le (less than or equal) → range validation
-#   example → shown as sample value in Swagger docs
 
 class TrafficInput(BaseModel):
     """
@@ -82,8 +55,8 @@ class TrafficInput(BaseModel):
     Every field here maps to a column in your dataset.
     """
     traffic_density: float = Field(
-        ...,                          # ... means this field is REQUIRED
-        ge=0, le=100,                 # must be between 0 and 100
+        ...,                          
+        ge=0, le=100,                 
         description="Number of vehicles per unit area",
         example=65.0
     )
@@ -133,18 +106,15 @@ class RouteRequest(BaseModel):
 class PredictionResponse(BaseModel):
     """What the API sends BACK after prediction."""
     predicted_stress_index: float
-    stress_level: str          # "Low", "Medium", "High"
+    stress_level: str          
     is_congested: bool
-    action: str                # What to do
+    action: str                
     signal_action: str
-    reroute_path: Optional[List[str]]   # Only present if High stress
+    reroute_path: Optional[List[str]]   
     reroute_cost: Optional[float]
 
 
-# ── HELPER FUNCTIONS ──────────────────────────────────────────
 
-# Stress thresholds — ideally load these from your trained data
-# In production, save these during training and load here
 LOW_THRESH = 3.5
 HIGH_THRESH = 6.5
 
@@ -158,9 +128,7 @@ def get_stress_level(stress_index: float) -> str:
         return "High"
 
 
-# ── GRAPH & DIJKSTRA ──────────────────────────────────────────
-# In production this would come from a database or map API.
-# For now, this is your zone graph.
+
 
 ZONE_GRAPH = {
     'Z1': {'Z2': 4.0, 'Z3': 2.5},
@@ -171,7 +139,6 @@ ZONE_GRAPH = {
     'Z6': {}
 }
 
-# Zone stress levels — in production, update this from live predictions
 ZONE_STRESS = {
     'Z1': 'Low', 'Z2': 'High', 'Z3': 'Medium',
     'Z4': 'Low', 'Z5': 'High', 'Z6': 'Low'
@@ -233,7 +200,6 @@ def prepare_features(data: TrafficInput) -> pd.DataFrame:
         'avg_speed': data.avg_speed,
         'horn_events_per_min': data.horn_events_per_min,
         'road_quality_score': data.road_quality_score,
-        # Engineered features
         'congestion_level': data.traffic_density * data.signal_wait_time,
         'frustration_index': data.horn_events_per_min * data.signal_wait_time,
         'speed_efficiency': data.avg_speed / (data.traffic_density + 1),
@@ -261,18 +227,7 @@ def prepare_features(data: TrafficInput) -> pd.DataFrame:
     return df
 
 
-# ============================================================
-# API ENDPOINTS
-# ============================================================
-# An "endpoint" is a URL that does something.
-# @app.get("/url")  → for fetching data (READ)
-# @app.post("/url") → for sending data (CREATE/PREDICT)
-# Every function below = one endpoint in your API.
 
-
-# ── ROOT ENDPOINT ─────────────────────────────────────────────
-# This is just a welcome message.
-# Visit http://localhost:8000/ to see it.
 @app.get("/")
 def root():
     """Welcome endpoint — checks if API is running."""
@@ -283,9 +238,7 @@ def root():
     }
 
 
-# ── HEALTH CHECK ──────────────────────────────────────────────
-# Standard in production APIs.
-# Used by deployment platforms (Docker, cloud) to check if app is alive.
+
 @app.get("/health")
 def health_check():
     """Check if model is loaded and API is healthy."""
@@ -296,12 +249,6 @@ def health_check():
     }
 
 
-# ── PREDICT ENDPOINT ──────────────────────────────────────────
-# This is the CORE of your API.
-# Someone sends traffic data → you return stress prediction + decision.
-#
-# @app.post → because the user is SENDING data to us
-# response_model → FastAPI validates our response matches PredictionResponse
 
 @app.post("/predict", response_model=PredictionResponse)
 def predict_stress(data: TrafficInput):
@@ -314,9 +261,7 @@ def predict_stress(data: TrafficInput):
     - If High stress: runs Dijkstra to find best reroute
     """
 
-    # Guard: if model not loaded, return error
-    # HTTPException is how FastAPI returns errors with proper HTTP status codes
-    # 503 = Service Unavailable
+
     if model is None:
         raise HTTPException(
             status_code=503,
@@ -379,7 +324,6 @@ def predict_stress(data: TrafficInput):
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
 
 
-# ── ROUTE OPTIMIZATION ENDPOINT ───────────────────────────────
 @app.post("/route")
 def optimize_route(request: RouteRequest):
     """
@@ -406,7 +350,6 @@ def optimize_route(request: RouteRequest):
     }
 
 
-# ── ZONE STATUS ENDPOINT ──────────────────────────────────────
 @app.get("/zones")
 def get_all_zones():
     """Return current stress status of all zones — used by dashboard."""
@@ -451,8 +394,6 @@ def get_zone(zone_id: str):
     }
 
 
-# ── BATCH PREDICT ENDPOINT ────────────────────────────────────
-# Instead of predicting one at a time, predict for many zones at once.
 @app.post("/predict/batch")
 def batch_predict(data_list: List[TrafficInput]):
     """

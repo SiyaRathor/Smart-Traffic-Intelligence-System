@@ -1,14 +1,4 @@
-# ============================================================
 # STREAMLIT DASHBOARD — Smart City Traffic Stress System
-# ============================================================
-# HOW TO RUN:
-#   1. pip install streamlit requests plotly pandas
-#   2. Make sure your FastAPI is running:
-#      python -m uvicorn main:app --reload
-#   3. In a NEW terminal run:
-#      streamlit run streamlit_app.py
-#   4. Browser opens at http://localhost:8501
-# ============================================================
 
 import streamlit as st
 import requests
@@ -17,17 +7,13 @@ import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
 
-# ── PAGE CONFIG ───────────────────────────────────────────────
-# Must be the FIRST streamlit command
 st.set_page_config(
     page_title="Smart Traffic Intelligence",
     page_icon="🚦",
-    layout="wide",                    # use full screen width
+    layout="wide",                   
     initial_sidebar_state="expanded"
 )
 
-# ── CUSTOM CSS ────────────────────────────────────────────────
-# Streamlit lets you inject raw CSS to style everything
 st.markdown("""
 <style>
     /* Import font */
@@ -138,10 +124,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── API CONFIG ────────────────────────────────────────────────
 API_BASE = "https://smart-traffic-intelligence-system-api.onrender.com"
 
-# ── HELPER FUNCTIONS ──────────────────────────────────────────
 
 def api_get(endpoint):
     """Call a GET endpoint on your FastAPI."""
@@ -179,12 +163,10 @@ def stress_emoji(level):
     return {"High": "🔴", "Medium": "🟡", "Low": "🟢"}.get(level, "⚪")
 
 
-# ── SIDEBAR ───────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 🚦 Smart Traffic\nIntelligence System")
     st.markdown("---")
 
-    # API health check
     health, err = api_get("/health")
     if health:
         status = health.get("status", "unknown")
@@ -200,7 +182,6 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### Navigation")
 
-    # Page selection
     page = st.radio(
         "Go to:",
         ["📊 Dashboard", "🔮 Predict Stress", "🗺️ Route Optimizer", "🏙️ Zone Status"],
@@ -213,9 +194,6 @@ with st.sidebar:
         st.rerun()
 
 
-# ============================================================
-# PAGE 1: DASHBOARD OVERVIEW
-# ============================================================
 if page == "📊 Dashboard":
 
     st.markdown("# 📊 Traffic Stress Dashboard")
@@ -233,7 +211,6 @@ if page == "📊 Dashboard":
         congested = zones_data.get("congested_zones", 0)
         safe = total - congested
 
-        # ── KPI METRICS ROW ──────────────────────────────────
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
@@ -266,7 +243,6 @@ if page == "📊 Dashboard":
 
         st.markdown("---")
 
-        # ── ZONE STRESS CHART ─────────────────────────────────
         col_left, col_right = st.columns([3, 2])
 
         with col_left:
@@ -276,7 +252,6 @@ if page == "📊 Dashboard":
             stress_levels = [z["stress_level"] for z in zones]
             colors = [stress_color(s) for s in stress_levels]
 
-            # Assign numeric stress for bar height
             stress_num = {"Low": 1, "Medium": 2, "High": 3}
             stress_values = [stress_num[s] for s in stress_levels]
 
@@ -335,7 +310,6 @@ if page == "📊 Dashboard":
 
             st.plotly_chart(fig_pie, use_container_width=True)
 
-        # ── ZONE TABLE ────────────────────────────────────────
         st.markdown("### Zone Details")
 
         for zone in zones:
@@ -354,10 +328,6 @@ if page == "📊 Dashboard":
                 neighbors = ", ".join(zone.get("neighbors", []))
                 st.markdown(f"Connects to: `{neighbors}`" if neighbors else "No neighbors")
 
-
-# ============================================================
-# PAGE 2: PREDICT STRESS
-# ============================================================
 elif page == "🔮 Predict Stress":
 
     st.markdown("# 🔮 Predict Traffic Stress")
@@ -518,9 +488,7 @@ elif page == "🔮 Predict Stress":
             """)
 
 
-# ============================================================
 # PAGE 3: ROUTE OPTIMIZER
-# ============================================================
 elif page == "🗺️ Route Optimizer":
 
     st.markdown("# 🗺️ Route Optimizer")
@@ -670,9 +638,7 @@ elif page == "🗺️ Route Optimizer":
                 st.caption("🔵 Blue path = optimal route | Node color = stress level")
 
 
-# ============================================================
 # PAGE 4: ZONE STATUS
-# ============================================================
 elif page == "🏙️ Zone Status":
 
     st.markdown("# 🏙️ Zone Status Monitor")

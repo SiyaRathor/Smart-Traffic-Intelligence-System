@@ -13,15 +13,11 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 
-# ============================================================
 # CONFIG
-# ============================================================
 os.makedirs("models", exist_ok=True)
 os.makedirs("outputs", exist_ok=True)
 
-# ============================================================
 # STEP 1: LOAD DATA
-# ============================================================
 df = pd.read_csv('smart_city_traffic_stress_dataset.csv')
 
 print("=" * 60)
@@ -32,16 +28,13 @@ print(df.info())
 print(df.isnull().sum())
 print(df.describe())
 
-# ============================================================
 # STEP 2: EDA — EXPLORATORY DATA ANALYSIS
-# ============================================================
 print("\n" + "=" * 60)
 print("STEP 2: EDA")
 print("=" * 60)
 
 sns.set_theme(style="darkgrid", palette="muted")
 
-# --- 2a. Target Distribution ---
 fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 fig.suptitle("Stress Index Distribution", fontsize=16, fontweight='bold')
 
@@ -56,7 +49,6 @@ plt.tight_layout()
 plt.savefig("outputs/01_stress_distribution.png", dpi=150)
 plt.show()
 
-# --- 2b. Correlation Heatmap ---
 numeric_df = df.select_dtypes(include=[np.number])
 corr = numeric_df.corr()
 
@@ -72,13 +64,10 @@ plt.tight_layout()
 plt.savefig("outputs/02_correlation_heatmap.png", dpi=150)
 plt.show()
 
-# Print top correlations with target
 print("\nTop correlations with stress_index:")
 print(corr['stress_index'].sort_values(ascending=False).to_string())
 
-# --- 2c. Key Feature vs Stress ---
 key_features = ['traffic_density', 'signal_wait_time', 'avg_speed', 'horn_events_per_min']
-# Only keep features that exist in dataset
 key_features = [f for f in key_features if f in df.columns]
 
 if key_features:
@@ -97,7 +86,6 @@ if key_features:
     plt.savefig("outputs/03_features_vs_stress.png", dpi=150)
     plt.show()
 
-# --- 2d. Categorical Analysis ---
 cat_cols = df.select_dtypes(include='object').columns.tolist()
 
 if cat_cols:
@@ -116,15 +104,12 @@ if cat_cols:
     plt.savefig("outputs/04_categorical_stress.png", dpi=150)
     plt.show()
 
-# --- 2e. Outlier Detection ---
 z_scores = np.abs((numeric_df - numeric_df.mean()) / numeric_df.std())
 outlier_counts = (z_scores > 3).sum()
 print("\nOutlier counts per feature (|z| > 3):")
 print(outlier_counts[outlier_counts > 0].to_string())
 
-# ============================================================
 # STEP 3: FEATURE ENGINEERING
-# ============================================================
 print("\n" + "=" * 60)
 print("STEP 3: FEATURE ENGINEERING")
 print("=" * 60)
@@ -141,12 +126,10 @@ if 'avg_speed' in df.columns and 'traffic_density' in df.columns:
 if 'road_quality_score' in df.columns and 'traffic_density' in df.columns:
     df['road_impact'] = df['road_quality_score'] * df['traffic_density']
 
-# Encode categoricals
 df_encoded = pd.get_dummies(df, columns=cat_cols, drop_first=True)
 
-# ============================================================
-# STEP 4: STRESS THRESHOLDS — DATA-DRIVEN (not arbitrary)
-# ============================================================
+# STEP 4: STRESS THRESHOLDS — DATA-DRIVEN 
+
 low_thresh = df['stress_index'].quantile(0.33)
 high_thresh = df['stress_index'].quantile(0.66)
 
@@ -163,9 +146,7 @@ def get_stress_level(x):
     else:
         return "High"
 
-# ============================================================
 # STEP 5: MODEL TRAINING
-# ============================================================
 print("\n" + "=" * 60)
 print("STEP 5: MODEL TRAINING")
 print("=" * 60)
@@ -207,14 +188,11 @@ joblib.dump(model_XGB, "models/xgb_model.pkl")
 joblib.dump(list(X.columns), "models/feature_columns.pkl")
 print("Model saved to models/xgb_model.pkl")
 
-# ============================================================
 # STEP 6: BUILD REAL ZONE GRAPH FROM DATASET
-# ============================================================
 print("\n" + "=" * 60)
 print("STEP 6: ZONE GRAPH FROM DATASET")
 print("=" * 60)
 
-# Detect zone/location column dynamically
 zone_col = None
 for candidate in ['zone', 'location', 'intersection', 'area', 'road_id', 'segment_id', 'node']:
     if candidate in df.columns:
@@ -224,20 +202,16 @@ for candidate in ['zone', 'location', 'intersection', 'area', 'road_id', 'segmen
 if zone_col:
     print(f"Using column '{zone_col}' as zone identifier.")
 
-    # Compute per-zone average stress
     zone_stress = df.groupby(zone_col)['stress_index'].mean()
     zones = zone_stress.index.tolist()
 
     print(f"Found {len(zones)} zones: {zones[:10]} {'...' if len(zones) > 10 else ''}")
 
-    # Build graph: connect adjacent zones (sequential adjacency as proxy)
-    # In a real deployment this would come from a road network map
     graph = {}
     for i, zone in enumerate(zones):
         graph[zone] = {}
-        # Connect to next and previous zone as neighbors
         if i > 0:
-            dist = round(np.random.uniform(1, 10), 1)  # base distance in km
+            dist = round(np.random.uniform(1, 10), 1)  
             graph[zone][zones[i - 1]] = dist
         if i < len(zones) - 1:
             dist = round(np.random.uniform(1, 10), 1)
@@ -246,7 +220,6 @@ if zone_col:
     node_stress_map = zone_stress.apply(get_stress_level).to_dict()
 
 else:
-    # Fallback: derive zones from dataset rows by clustering stress into buckets
     print("No zone column found. Deriving synthetic zones from dataset rows.")
 
     df['zone_id'] = pd.qcut(df.index, q=6, labels=['Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6'])
@@ -270,9 +243,7 @@ print("\nZone → Stress Level:")
 for z, s in node_stress_map.items():
     print(f"  {z}: {s} (avg stress: {zone_stress[z]:.2f})")
 
-# ============================================================
 # STEP 7: DIJKSTRA WITH REAL STRESS WEIGHTS
-# ============================================================
 print("\n" + "=" * 60)
 print("STEP 7: DIJKSTRA — STRESS-WEIGHTED ROUTING")
 print("=" * 60)
@@ -323,9 +294,7 @@ def dijkstra(graph, start, end):
 
 adjusted_graph = build_adjusted_graph(graph, node_stress_map)
 
-# ============================================================
 # STEP 8: DECISION ENGINE — CONNECTED TO DIJKSTRA
-# ============================================================
 print("\n" + "=" * 60)
 print("STEP 8: DECISION ENGINE")
 print("=" * 60)
@@ -390,9 +359,7 @@ for zone in all_zones:
         print(f"  Reroute Path : {' → '.join(str(z) for z in decision['reroute_path'])}")
         print(f"  Reroute Cost : {decision['reroute_cost']}")
 
-# ============================================================
 # STEP 9: APPLY PREDICTIONS ON TEST SET
-# ============================================================
 print("\n" + "=" * 60)
 print("STEP 9: PREDICTIONS ON TEST SET")
 print("=" * 60)
@@ -405,9 +372,7 @@ results['is_congested'] = results['stress_level'].apply(lambda x: 1 if x == "Hig
 print(results[['predicted_stress', 'stress_level', 'is_congested']].head(10))
 print(f"\nCongestion rate: {results['is_congested'].mean() * 100:.1f}% of predictions are High stress")
 
-# ============================================================
 # STEP 10: FEATURE IMPORTANCE
-# ============================================================
 print("\n" + "=" * 60)
 print("STEP 10: FEATURE IMPORTANCE")
 print("=" * 60)
@@ -427,9 +392,7 @@ plt.tight_layout()
 plt.savefig("outputs/05_feature_importance.png", dpi=150)
 plt.show()
 
-# ============================================================
 # STEP 11: MODEL COMPARISON CHART
-# ============================================================
 model_names = ['Linear Regression', 'Random Forest', 'XGBoost']
 cv_means = [cv_lr.mean(), cv_rf.mean(), cv_xgb.mean()]
 cv_stds = [cv_lr.std(), cv_rf.std(), cv_xgb.std()]
@@ -447,9 +410,7 @@ plt.tight_layout()
 plt.savefig("outputs/06_model_comparison.png", dpi=150)
 plt.show()
 
-# ============================================================
 # SUMMARY
-# ============================================================
 print("\n" + "=" * 60)
 print("PROJECT SUMMARY")
 print("=" * 60)
