@@ -183,4 +183,4 @@ Smart_Traffic_Intelligence_System/
 
 ## 👤 Author
 
-Built by [Your Name] — [LinkedIn](https://linkedin.com) | [GitHub](https://github.com/YOURUSERNAME)
+Built by Siya Rathor — [LinkedIn](https://www.linkedin.com/in/siyarathor/) | [GitHub](https://github.com/SiyaRathor)
